@@ -1,0 +1,17 @@
+# 7/19/19: radio weirdness
+
+Note: this is my first entry into this log but very much not the first work done on this project.
+
+I kept running into a failure to transmit error while I was trying to run `ranger_transmitter` and `multi_receiver_print_serial`. I checked the wiring repeatedly and couldn't diagnose the problem. I disconnected the SDA and SCL lines running to the ranger, thinking perhaps they were interfering with the transmission, but that didn't help either. It was especially confusing since I'd been using only lightly modified code, with a nearly identical hardware setup, that worked very well on the Empathy Machine project only about a month ago. (That hardware has continued to work.)
+
+The Empathy Machine code uses an acknowledge packet to return data to the requesting radio, which is a clever way of having one receiving radio that many transmitters send things to: the "receiver" actually sends out packets to one radio at a time, and the recipient of each packet responds only when called on. This prevents collisions and worked just fine the last time I tried it, as I've mentioned.
+
+Shifting to a simpler model, I tried using the `simple_rx` and `simple_tx` sketches (found in the `examples and tests` folder) which mercifully finally worked…with a caveat. For some reason, about half of the packets seemed to be dropped. As in, the transmitter was sending one packet per second, and the receiver would only blink about half the time. Very confusing behavior, for two radios which are a foot apart from each other on a table. Perhaps this is an environment (a university campus) where there's enough 2.4GHz traffic to interfere with these attempts.
+
+One note: I'm watching the little hardware TX lights to see when the transmitter is sending and when the receiver is receiving, and that makes it obvious when they're mismatched (because the transmitter is blinking like twice as much as the receiver). However! The blinking is perfectly in lockstep right until I open the serial connection on the computer attached to the receiver. Are `Serial.println()` executions the problem here? I don't think it's a timing issue, because even when I'm only transmitting one packet a second it's still dropping like half of them. Don't know.
+
+## Next step: wired
+
+I spent more time trying to get these wireless modules to work, and began investigating the strange data loss behavior, but it's a dark rabbit hole. Instead, I'm going to eschew the radio feature entirely—it was only implemented as a way of simplifying the prototyping I want to do. Instead, I'll rewrite the code so the one "receiver" and all the "transmitters" are simply wired together. I'll use software serial on all of them so that I can plug into their hardware UART via the serial monitor to update and debug as needed. And I'll just run a bunch of long wires to each module: two for power, and two for data. Hopefully the cable runs won't be so long that there's data quality problems…probably a 10 foot run won't be too much.
+
+I could just move towards the likely final installation version of this, namely using RS485 modules since that's a safe/reasonable way to move signals over any sort of distance, with easy cabling, etc.
