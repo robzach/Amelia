@@ -33,3 +33,5 @@ Transmission time for the message `#0:1234` at 9600 baud is observed as 9.36ms o
 Next up: try a higher data speed, hopefully while maintaining data integrity. Have been using 9600 baud, and I'll just leap up to 115200 to see what happens. If it's transmitting good data, then the messages can be crammed into a much narrower frame, and more messages can be sent per second overall.
 
 Results: 19200 baud is the fastest baud rate that successfully transmits data across the ~6' twisted wires; above that the inductance and/or capacitance of the wire isn't getting good data to the far end. Of course, using RS485 transmitters would solve this problem entirely and permit for much higher data transmission rates. Requests for new data should be sent no more often than every 200ms, or data from the prior request will overlap and cause errors.
+
+**Adding a Processing sketch** to graph the data, which is doing something, but not drawing good graphs yet.
