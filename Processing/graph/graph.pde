@@ -23,6 +23,8 @@
  the serial event isn't recommended and was introducing occasional errors)
  * any values of 0 (min) or 1000 (max) back from the sensor are painted red
  * added better legend, etc.
+ * added array of checkboxes and x's for constant 10cm and 50cm diagnostic tests
+ * started adding trials ("put your hand at 30cm") with voice prompts, *very* incomplete
  
  */
 
@@ -34,9 +36,24 @@ int[] barHeight = new int[NUM_OF_SENSORS]; // scaled data for graphing
 
 int MINGRAPHHEIGHT, MAXGRAPHHEIGHT, GRAPHRANGE;
 
+int TASKAREALEFTEDGE = ((NUM_OF_SENSORS+1)*75); // right edge of graphs = left edge of task area
+
+float SLOP = 0.05; // factor by which a distance can be ± and still be acceptable
+
 import processing.serial.*;
 Serial myPort;
 String portName = "/dev/cu.usbserial-1410";
+
+// speech
+import guru.ttslib.*;
+TTS tts;
+
+// GUI elements
+import controlP5.*;
+ControlP5 cp5;
+boolean toggleValue = false;
+
+boolean thirtycm = false;
 
 void setup () {
 
@@ -49,19 +66,104 @@ void setup () {
   MAXGRAPHHEIGHT = height - 20;
   GRAPHRANGE = MAXGRAPHHEIGHT - MINGRAPHHEIGHT;
 
-
   myPort = new Serial(this, portName, 9600);
   // don't generate a serialEvent() unless you get a newline character:
   myPort.bufferUntil('\n');
-  // set inital background:
+
+  tts = new TTS();
+
+  cp5 = new ControlP5(this);
+
+  cp5.addToggle("toggleValue")
+    .setValue(0)
+    .setPosition(TASKAREALEFTEDGE, 200)
+    .setSize(25, 25)
+    ;
+
+  cp5.addNumberbox("targetDistNumBox")
+    .setPosition(TASKAREALEFTEDGE, 250)
+    .setSize(50, 25)
+    .setScrollSensitivity(0.5)
+    .setValue(50)
+    ;
+
   background(0);
   fill(255);
+}
+
+void targetDistNumBox(int targetDist) {
+  println("targetDist = " + targetDist);
+}
+
+void toggleValue() {
+  if (toggleValue==true) tts.speak("button pressed");
 }
 
 void draw () {
   background(0);
   drawLegend();
   drawGraphLines();
+  drawTaskArea();
+  tests();
+}
+
+void keyPressed() {
+  if (key == '3') thirtycm = true;
+}
+
+void drawTaskArea() {
+  pushMatrix();
+  translate(TASKAREALEFTEDGE, 50);
+
+  // 10cm static test
+  fill(255);
+  text("10cm", 0, 50);
+  for (int j = 0; j < NUM_OF_SENSORS; j++) {
+    if (positions[j] > 95 && positions[j] < 105) {
+      fill(0, 255, 0);
+      text("√", (j+1)*50, 50);
+      if (j == 0) {
+        tts.speak("great job at 10 centimeters");
+      }
+    } else {
+      fill(255, 0, 0);
+      text ("X", (j+1)*50, 50);
+    }
+  }
+
+  pushMatrix();
+  translate(0, 50);
+  // 50cm static test
+  fill(255);
+  text("50cm", 0, 50);
+  for (int j = 0; j < NUM_OF_SENSORS; j++) {
+    if (positions[j] > 475 && positions[j] < 525) {
+      fill(0, 255, 0);
+      text("√", (j+1)*50, 50);
+      if (j == 0) tts.speak("great job at 50 centimeters");
+    } else {
+      fill(255, 0, 0);
+      text ("X", (j+1)*50, 50);
+    }
+  }
+  popMatrix();
+
+  pushMatrix();
+  translate(0, 150);
+  // up-down instruction
+  popMatrix();
+
+  popMatrix();
+}
+
+void tests() {
+  if (thirtycm) {
+    tts.speak("put your hand 30 centimeters above the sensor");
+    delay(1000);
+    if (positions[0] > (300*(1+SLOP)) && positions[0] < (300*(1-SLOP))) tts.speak("hey good job!");
+    else tts.speak("nope");
+    thirtycm = false;
+  }
 }
 
 void drawGraphLines() {
@@ -82,6 +184,7 @@ void drawGraphLines() {
 }
 
 void drawLegend() {
+  fill(255);
   text("0mm", 40, MAXGRAPHHEIGHT); // graph minimum legend (at bottom, hence "max" height)
   text("1000mm", 20, MINGRAPHHEIGHT); // graph maximum legend (at top, hence "min" height)
 
@@ -114,10 +217,13 @@ void serialEvent (Serial myPort) {
   // then parse input into five values
   positions = int(split(inString, '\t'));
 
+  // console printing of incoming data
+  /*
   for (int i = 0; i<NUM_OF_SENSORS; i++) {
     print(i + ": " + positions[i] + "     ");
     if (i == NUM_OF_SENSORS-1) println();
   }
+  */
 
   // clamp inputs to between 0 and 1000, then map those 0 to 200 for graphing
   for (int i = 0; i<NUM_OF_SENSORS; i++) {
