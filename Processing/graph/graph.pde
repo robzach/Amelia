@@ -37,12 +37,18 @@ int[] barHeight = new int[NUM_OF_SENSORS]; // scaled data for graphing
 int MINGRAPHHEIGHT, MAXGRAPHHEIGHT, GRAPHRANGE;
 
 int TASKAREALEFTEDGE = ((NUM_OF_SENSORS+1)*75); // right edge of graphs = left edge of task area
+int BALLBOUNCELEFTEDGE = TASKAREALEFTEDGE + 400;
+int counter = 0;
+
+public float speedDivisor = 50;
+
+boolean VOCALFEEDBACK = false;
 
 float SLOP = 0.05; // factor by which a distance can be ± and still be acceptable
 
 import processing.serial.*;
 Serial myPort;
-String portName = "/dev/cu.usbserial-1410";
+String portName = "/dev/cu.usbserial-1420";
 
 // speech
 import guru.ttslib.*;
@@ -80,8 +86,8 @@ void setup () {
     .setSize(25, 25)
     ;
 
-  cp5.addNumberbox("targetDistNumBox")
-    .setPosition(TASKAREALEFTEDGE, 250)
+  cp5.addNumberbox("speedDivisor")
+    .setPosition(BALLBOUNCELEFTEDGE-10, 20)
     .setSize(50, 25)
     .setScrollSensitivity(0.5)
     .setValue(50)
@@ -89,10 +95,6 @@ void setup () {
 
   background(0);
   fill(255);
-}
-
-void targetDistNumBox(int targetDist) {
-  println("targetDist = " + targetDist);
 }
 
 void toggleValue() {
@@ -104,7 +106,49 @@ void draw () {
   drawLegend();
   drawGraphLines();
   drawTaskArea();
+  bounceBall();
+  steadyTest();
   tests();
+}
+
+void steadyTest(){
+  
+
+void bounceBall() {
+  //float speedDivisor = 50; // drives the ball speed--higher is slower
+  counter++; // used to feed sine function for oscillation
+
+  // default values
+  fill(0, 0, 255);
+
+  int maxTarget = 500;
+  int minTarget = 200;
+
+  // test at max height
+  if (sin(counter/speedDivisor) < -0.999) {
+    if (abs(positions[0] - maxTarget) < 30) {
+      //println("good job on max");
+      fill(255);
+    } else fill(255, 0, 0);
+  }
+
+  // test at min height
+  if (sin(counter/speedDivisor) > 0.999) {
+    if (abs(positions[0] - minTarget) < 30) {
+      //println("good job on min");
+      fill(255);
+    } else fill(255, 0, 0);
+  }
+
+  // line to show range of ball's motion
+  stroke(128);
+  line(BALLBOUNCELEFTEDGE, 100, BALLBOUNCELEFTEDGE, 200);
+
+  // bouncing ball, which blinks white if you hit the max or min values at the right moment
+  // or stays blue if you don't
+  stroke(0, 0, 255);
+  float ellipseYpos = 50*sin(counter/speedDivisor) + 150;
+  ellipse(BALLBOUNCELEFTEDGE, ellipseYpos, 20, 20);
 }
 
 void keyPressed() {
@@ -115,6 +159,7 @@ void drawTaskArea() {
   pushMatrix();
   translate(TASKAREALEFTEDGE, 50);
 
+
   // 10cm static test
   fill(255);
   text("10cm", 0, 50);
@@ -123,7 +168,7 @@ void drawTaskArea() {
       fill(0, 255, 0);
       text("√", (j+1)*50, 50);
       if (j == 0) {
-        tts.speak("great job at 10 centimeters");
+        if (VOCALFEEDBACK) tts.speak("great job at 10 centimeters");
       }
     } else {
       fill(255, 0, 0);
@@ -140,7 +185,9 @@ void drawTaskArea() {
     if (positions[j] > 475 && positions[j] < 525) {
       fill(0, 255, 0);
       text("√", (j+1)*50, 50);
-      if (j == 0) tts.speak("great job at 50 centimeters");
+      if (j == 0) {
+        if (VOCALFEEDBACK) tts.speak("great job at 50 centimeters");
+      }
     } else {
       fill(255, 0, 0);
       text ("X", (j+1)*50, 50);
@@ -220,10 +267,10 @@ void serialEvent (Serial myPort) {
   // console printing of incoming data
   /*
   for (int i = 0; i<NUM_OF_SENSORS; i++) {
-    print(i + ": " + positions[i] + "     ");
-    if (i == NUM_OF_SENSORS-1) println();
-  }
-  */
+   print(i + ": " + positions[i] + "     ");
+   if (i == NUM_OF_SENSORS-1) println();
+   }
+   */
 
   // clamp inputs to between 0 and 1000, then map those 0 to 200 for graphing
   for (int i = 0; i<NUM_OF_SENSORS; i++) {
