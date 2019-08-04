@@ -40,7 +40,14 @@ int TASKAREALEFTEDGE = ((NUM_OF_SENSORS+1)*75); // right edge of graphs = left e
 int BALLBOUNCELEFTEDGE = TASKAREALEFTEDGE + 400;
 int counter = 0;
 
+// used in bouncing ball
 public float speedDivisor = 50;
+
+
+// used in steady test
+public long timer;
+int cycleCounter = 0;
+
 
 boolean VOCALFEEDBACK = false;
 
@@ -107,12 +114,31 @@ void draw () {
   drawGraphLines();
   drawTaskArea();
   bounceBall();
-  steadyTest();
   tests();
 }
 
-void steadyTest(){
+void steadyTest() {
+  fill(255);
+  text ("Steady Test\ntype \'s\' to begin", BALLBOUNCELEFTEDGE, 400);
+
+  // load 1 second of data into an array
+  int[] history = new int[10000];
+  cycleCounter = 0;
+  timer = millis();
+
+  // blocking for now but to be improved
+  while (millis() - timer < 1000) {
+    history[cycleCounter] = positions[0];
+    cycleCounter++;
+  }
   
+  int sum = 0;
+  for (int i = 0; i < cycleCounter; i++) sum += history[i];
+  
+  float meanHeight = sum / cycleCounter;
+  println(meanHeight);
+  
+}
 
 void bounceBall() {
   //float speedDivisor = 50; // drives the ball speed--higher is slower
@@ -153,6 +179,7 @@ void bounceBall() {
 
 void keyPressed() {
   if (key == '3') thirtycm = true;
+  if (key == 's') steadyTest();
 }
 
 void drawTaskArea() {
