@@ -32,6 +32,7 @@
  * added toggle to try to adjust the level of red brightness using position data. It's
  not working; lots of different LED colors are shown, seemingly randomly (?)
  * reordered code for greater legibility
+ * squashed bug where last data point was consistently not being read
  
  */
 
