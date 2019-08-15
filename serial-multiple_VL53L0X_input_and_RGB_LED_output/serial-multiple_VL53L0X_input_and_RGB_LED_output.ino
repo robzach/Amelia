@@ -4,9 +4,9 @@
 
     Distance input information:
 
-        Distance values are reported, tab delimited, via serial port. Sample data looks like:
+        Distance values are reported, space-delimited, via serial port. Sample data looks like:
 
-        265  307 144 8190
+        263 307 144 8190
 
         Note that the value 8190 is what the sensor typically reports when the target surface
         is out of range.
@@ -138,7 +138,7 @@ void writeSensorValuesOut() {
     if (sensor[i].timeoutOccurred() && DEBUG) {
       Serial.print(" TIMEOUT");
     }
-    if (i != NUM_SENSORS - 1) Serial.print('\t'); // tab delimit between values
+    if (i != NUM_SENSORS - 1) Serial.print(' '); // space delimit between values
   }
   Serial.println();
 }
