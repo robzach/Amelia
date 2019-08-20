@@ -55,6 +55,8 @@
  Termination: Probably pre-baked to imply user is lying, regardless of the answers they supply.
  
  
+ 
+ 
  This sketch based on "graph," found in commit 698b36c, which in turn draws from Tom Igoe's work.
  */
 
@@ -80,6 +82,10 @@ int[] positions = new int[NUM_OF_SENSORS]; // incoming position data
 int[] barHeight = new int[NUM_OF_SENSORS]; // scaled data for graphing
 int MINGRAPHHEIGHT, MAXGRAPHHEIGHT, GRAPHRANGE; // variables for drawing graphs
 
+// named variables to store positions[0,1,2,3] in that order
+// perspective is from the user's side of the cube
+int left, front, right, top; 
+
 // used in steady test
 public long timer;
 int cycleCounter = 0;
@@ -89,6 +95,23 @@ boolean VOCALFEEDBACK = false;
 float SLOP = 0.05; // factor by which a distance can be ± and still be acceptable
 int TASKAREALEFTEDGE = ((NUM_OF_SENSORS+1)*75); // right edge of graphs = left edge of task area
 
+// breathing tempo (milliseconds between breaths; set by a GUI slider)
+float breathingTempo;
+long lastBreathTime;
+
+// timing variables for throttling rate of writing out to serial port (milliseconds)
+long WRITE_INTERVAL = 500; // even at 200 it creates garbage output from the Arduino…something is wrong
+long lastWriteTime;
+
+// enumerated variable to track state machine mode
+enum Mode { 
+  INTRO, CALMING, DISORIENTATION, INTERROGATION, TERMINATION
+};
+
+Mode mode = Mode.INTRO; // initial state
+Mode prevMode; // to track changes
+
+
 // used in bouncing ball
 public float speedDivisor = 50;
 int BALLBOUNCELEFTEDGE = TASKAREALEFTEDGE + 400;
@@ -96,6 +119,7 @@ int counter = 0;
 
 
 void setup () {
+
   // you can adjust height as wanted, and the graphs will scale appropriately
   size(1200, 500); 
 
@@ -108,6 +132,7 @@ void setup () {
   // don't generate a serialEvent() unless you get a newline character:
   myPort.bufferUntil('\n');
 
+  // text to speech object
   tts = new TTS();
 
   // add GUI control elements
@@ -132,6 +157,8 @@ void setup () {
 
 void draw () {
   background(0);
+
+
   drawLegend();
   drawGraphLines();
   drawTaskArea();
@@ -140,7 +167,19 @@ void draw () {
   drawSerialStream();
 
   redAdjuster();
+
+  stateMachine();
 }
+
+void keyPressed() {
+  if (key == '3') thirtycm = true;
+  if (key == 's') steadyTest();
+  if (key == 'r') myPort.write("255,0,0\n"); // red LEDs
+  if (key == 'g') myPort.write("0,255,0\n"); // green LEDs
+  if (key == 'b') myPort.write("0,0,255\n"); // blue LEDs
+  if (key == 'o') myPort.write("0,0,0\n"); // turn off LEDs
+}
+
 
 void drawLegend() {
   fill(255);
@@ -292,7 +331,21 @@ void redAdjuster() {
   int constrainedPosData = constrain(positions[2], 0, 1000);
   int redVal = int( map (constrainedPosData, 0, 1000, 0, 255));
   text("writing: " + redVal + ",0,0\n", TASKAREALEFTEDGE, 250);
-  myPort.write(redVal + ",0,0\n");
+
+  //myPort.write(redVal + ",0,0\n");
+  if (!writeOut(redVal + ",0,0\n")) writeOut(redVal + ",0,0\n"); // if it didn't work, try again
+}
+
+boolean writeOut(String outString) {
+  // limit rate of writing out to serial port (too fast screws up the Arduino)
+  // return true if write succeeded, false if not
+
+  if (millis() - lastWriteTime >= WRITE_INTERVAL) {
+    myPort.write(outString);
+    lastWriteTime = millis();
+    return true;
+  }
+  return false;
 }
 
 void steadyTest() {
@@ -315,17 +368,6 @@ void steadyTest() {
 
   float meanHeight = sum / cycleCounter;
   println(meanHeight);
-}
-
-
-
-void keyPressed() {
-  if (key == '3') thirtycm = true;
-  if (key == 's') steadyTest();
-  if (key == 'r') myPort.write("255,0,0\n"); // red LEDs
-  if (key == 'g') myPort.write("0,255,0\n"); // green LEDs
-  if (key == 'b') myPort.write("0,0,255\n"); // blue LEDs
-  if (key == 'o') myPort.write("0,0,0\n"); // turn off LEDs
 }
 
 void serialEvent (Serial myPort) {
@@ -352,4 +394,10 @@ void serialEvent (Serial myPort) {
     positions[i] = constrain(positions[i], 0, 1000);
     barHeight[i] = (int)map(positions[i], 1000, 0, 0, GRAPHRANGE);
   }
+  
+  
+  left = positions[0];
+  front = positions[1];
+  right = positions[2];
+  top = positions[3];
 }
