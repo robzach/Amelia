@@ -10,7 +10,7 @@
       SCL to Arduino A5
       SDA to Arduino A4
       XSHUT incrementally starting at Arduino digital pin 2
-      (first sensor wires XSHUT to Arduino 2, second sensor wires XSHUT to Arduino 3, etc.)
+      (first sensor wires XSHUT to Arduino pin 2, second sensor wires XSHUT to Arduino pin 3, etc.)
 
   Based on Pololu's VL53L0X example code; their original text below:
 
@@ -23,15 +23,15 @@
   The range readings are in units of mm."
 
   Robert Zacharias, 8-7-19
-  
-  */
+
+*/
 
 #include <Wire.h>
 #include <VL53L0X.h>
 
-const int NUM_SENSORS = 3;
+const int NUM_SENSORS = 4;
 const byte START_ADDRESS = 29; // first I2C address to provision (the rest will increment)
-const long SERIAL_SPEED = 112500; // serial communication baud rate
+const long SERIAL_SPEED = 9600; // serial communication baud rate
 
 const bool DEBUG = false; // set to true for some serial debugging messages
 
@@ -45,7 +45,7 @@ VL53L0X sensor[NUM_SENSORS];
 // other than the intended target. It works best in dark
 // conditions.
 
-#define LONG_RANGE
+//#define LONG_RANGE
 
 
 // Uncomment ONE of these two lines to get
@@ -77,7 +77,7 @@ void setup()
     sensor[i].init();
     sensor[i].setTimeout(500);
     sensor[i].setAddress(i + START_ADDRESS);
-    if(DEBUG) Serial.println((String)"sensor: " + i + ", address: " + (i + START_ADDRESS));
+    if (DEBUG) Serial.println((String)"sensor: " + i + ", address: " + (i + START_ADDRESS));
 
 #if defined LONG_RANGE
     // lower the return signal rate limit (default is 0.25 MCPS)
@@ -104,7 +104,7 @@ void loop()
     if (sensor[i].timeoutOccurred() && DEBUG) {
       Serial.print(" TIMEOUT");
     }
-    if (i != NUM_SENSORS -1) Serial.print('\t'); // tab delimit between values
+    if (i != NUM_SENSORS - 1) Serial.print('\t'); // tab delimit between values
   }
   Serial.println();
 }
