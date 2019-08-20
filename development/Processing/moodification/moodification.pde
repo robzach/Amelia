@@ -54,7 +54,9 @@
  Interrogation: User is asked questions of increasing intensity and seriousness.
  Termination: Probably pre-baked to imply user is lying, regardless of the answers they supply.
  
- 
+ Actually achieved tonight:
+ * state machine begun; initial training module somewhat far along
+ * pass/fail test mostly worked out (see redBreathe() function)
  
  
  This sketch based on "graph," found in commit 698b36c, which in turn draws from Tom Igoe's work.
@@ -94,9 +96,10 @@ int cycleCounter = 0;
 boolean VOCALFEEDBACK = false;
 float SLOP = 0.05; // factor by which a distance can be ± and still be acceptable
 int TASKAREALEFTEDGE = ((NUM_OF_SENSORS+1)*75); // right edge of graphs = left edge of task area
+float runningAverageDelta; // used in calculating how well the user is matching a specified breathing rate
 
-// breathing tempo (milliseconds between breaths; set by a GUI slider)
-float breathingTempo;
+// breathing tempo (milliseconds between breaths)
+float breathingTempo = 8000;
 long lastBreathTime;
 
 // timing variables for throttling rate of writing out to serial port (milliseconds)
@@ -166,7 +169,7 @@ void draw () {
   tests();
   drawSerialStream();
 
-  redAdjuster();
+  if (redAdjusterBool) redAdjuster();
 
   stateMachine();
 }
@@ -326,9 +329,8 @@ void drawSerialStream() {
 }
 
 void redAdjuster() {
-  if (!redAdjusterBool) return;
 
-  int constrainedPosData = constrain(positions[2], 0, 1000);
+  int constrainedPosData = constrain(left, 0, 1000);
   int redVal = int( map (constrainedPosData, 0, 1000, 0, 255));
   text("writing: " + redVal + ",0,0\n", TASKAREALEFTEDGE, 250);
 
@@ -394,8 +396,8 @@ void serialEvent (Serial myPort) {
     positions[i] = constrain(positions[i], 0, 1000);
     barHeight[i] = (int)map(positions[i], 1000, 0, 0, GRAPHRANGE);
   }
-  
-  
+
+
   left = positions[0];
   front = positions[1];
   right = positions[2];
