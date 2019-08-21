@@ -58,6 +58,15 @@
  * state machine begun; initial training module somewhat far along
  * pass/fail test mostly worked out (see redBreathe() function)
  
+ 8-20-19
+ Picking up yesterday's TODOs as primary goals
+ * continue state machine development for fuller demo in the morning
+ * complete pass/fail test for hand movement
+ 
+ Made some progress: 
+ * state machine is further developed with non-blocking states-within-states
+ * top sensor was added though still buggy (greenBreathe() is its function)
+ 
  
  This sketch based on "graph," found in commit 698b36c, which in turn draws from Tom Igoe's work.
  */
@@ -103,7 +112,9 @@ float breathingTempo = 8000;
 long lastBreathTime;
 
 // timing variables for throttling rate of writing out to serial port (milliseconds)
-long WRITE_INTERVAL = 500; // even at 200 it creates garbage output from the Arduino…something is wrong
+long WRITE_INTERVAL = 400; // at or below 200 it creates garbage output from the Arduino…something is wrong
+// consider rewiting Processing->Arduino data flow so it always sends three three-digit values for parsing,
+// in the style of this useful sample code https://arduino.stackexchange.com/questions/46008/what-is-a-faster-alternative-to-parseint
 long lastWriteTime;
 
 // enumerated variable to track state machine mode
@@ -113,6 +124,8 @@ enum Mode {
 
 Mode mode = Mode.INTRO; // initial state
 Mode prevMode; // to track changes
+
+int stageCounter = 0; // for tracking within modes
 
 
 // used in bouncing ball
@@ -134,6 +147,13 @@ void setup () {
   myPort = new Serial(this, portName, 9600);
   // don't generate a serialEvent() unless you get a newline character:
   myPort.bufferUntil('\n');
+
+
+  // this didn't stop the serialEvent error from happening:
+  while (myPort.available() < 1) {
+    ;
+  }; // wait until port is available before proceeding
+
 
   // text to speech object
   tts = new TTS();
@@ -161,11 +181,10 @@ void setup () {
 void draw () {
   background(0);
 
-
   drawLegend();
   drawGraphLines();
   drawTaskArea();
-  bounceBall();
+  //bounceBall();
   tests();
   drawSerialStream();
 
@@ -334,8 +353,8 @@ void redAdjuster() {
   int redVal = int( map (constrainedPosData, 0, 1000, 0, 255));
   text("writing: " + redVal + ",0,0\n", TASKAREALEFTEDGE, 250);
 
-  //myPort.write(redVal + ",0,0\n");
-  if (!writeOut(redVal + ",0,0\n")) writeOut(redVal + ",0,0\n"); // if it didn't work, try again
+  myPort.write(redVal + ",0,0\n");
+  //if (!writeOut(redVal + ",0,0\n")) writeOut(redVal + ",0,0\n"); // if it didn't work, try again
 }
 
 boolean writeOut(String outString) {
@@ -391,13 +410,13 @@ void serialEvent (Serial myPort) {
    }
    */
 
-  // clamp inputs to between 0 and 1000, then map those 0 to 200 for graphing
+  // clamp inputs to between 0 and 1000, then map those 0 to GRAPHRANGE for graphing
   for (int i = 0; i<NUM_OF_SENSORS; i++) {
     positions[i] = constrain(positions[i], 0, 1000);
     barHeight[i] = (int)map(positions[i], 1000, 0, 0, GRAPHRANGE);
   }
 
-
+  // easier names for cube face distance data (named from perspective of user)
   left = positions[0];
   front = positions[1];
   right = positions[2];
