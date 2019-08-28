@@ -5,7 +5,7 @@
  
  written for Probable Models / Bricolage production of Project Amelia in Pittsburgh, fall 2019
  
- Robert Zacharias, rz@rzach.me, 8-19-19
+ Robert Zacharias, rz@rzach.me, 8-27-19
  
  
  7-25-19 picking up where I left off four years ago!
@@ -68,12 +68,23 @@
  * top sensor was added though still buggy (greenBreathe() is its function)
  
  
+ 8-27-19
+ Goal for tonight is to complete the "interrogation mode":
+ * waiting mode (nobody is tagged in yet)
+ * orientation (train the user)
+ * disorientation (give them commands more quickly than they can complete them, flash an alarm when they fail)
+ * finished (a final color indicates the machine's final disposition at the end of the "lie-detecting"
+ 
+ Next, this sketch will be run on Processing on a Raspberry Pi, with SPI instead of Serial UART communication,
+ the idea being that this will be faster and more reliable for moving data back and forth
+ 
+ 
  This sketch based on "graph," found in commit 698b36c, which in turn draws from Tom Igoe's work.
  */
 
 import processing.serial.*;
 Serial myPort;
-String portName = "/dev/cu.usbserial-1410";
+String portName = "/dev/cu.usbserial-1420";
 String inString = "1"; // serial read string
 
 
@@ -119,7 +130,7 @@ long lastWriteTime;
 
 // enumerated variable to track state machine mode
 enum Mode { 
-  INTRO, CALMING, DISORIENTATION, INTERROGATION, TERMINATION
+  INTRO, CALMING, DISORIENTATION, INTERROGATION, TERMINATION, IDLE
 };
 
 Mode mode = Mode.INTRO; // initial state
@@ -347,13 +358,34 @@ void drawSerialStream() {
   text("positions [3] = " + positions[3], TASKAREALEFTEDGE, height-10);
 }
 
-void redAdjuster() {
 
+void redAdjuster() {
+  // read left hand position, vary red brightness based on that value
   int constrainedPosData = constrain(left, 0, 1000);
   int redVal = int( map (constrainedPosData, 0, 1000, 0, 255));
   text("writing: " + redVal + ",0,0\n", TASKAREALEFTEDGE, 250);
 
-  myPort.write(redVal + ",0,0\n");
+  writeOut(redVal + ",0,0\n");
+  //if (!writeOut(redVal + ",0,0\n")) writeOut(redVal + ",0,0\n"); // if it didn't work, try again
+}
+
+void blueAdjuster() {
+  // read right hand position, vary blue brightness based on that value
+  int constrainedPosData = constrain(right, 0, 1000);
+  int blueVal = int( map (constrainedPosData, 0, 1000, 0, 255));
+  text("writing: 0,0," + blueVal + "\n", TASKAREALEFTEDGE, 250);
+
+  writeOut("0,0," + blueVal + "\n");
+  //if (!writeOut(redVal + ",0,0\n")) writeOut(redVal + ",0,0\n"); // if it didn't work, try again
+}
+
+void greenAdjuster() {
+  // read top hand position, vary blue brightness based on that value
+  int constrainedPosData = constrain(top, 0, 1000);
+  int greenVal = int( map (constrainedPosData, 0, 1000, 0, 255));
+  text("writing: 0," + greenVal + ",0\n", TASKAREALEFTEDGE, 250);
+
+  writeOut("0," + greenVal + ",0\n");
   //if (!writeOut(redVal + ",0,0\n")) writeOut(redVal + ",0,0\n"); // if it didn't work, try again
 }
 
