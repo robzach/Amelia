@@ -84,7 +84,14 @@
 
 import processing.serial.*;
 Serial myPort;
-String portName = "/dev/cu.usbserial-1420";
+//String portName = "/dev/cu.usbserial-1420"; // for USB access to the Arduino
+
+String portName = "/dev/serial0"; // setting for the hardware UART pins on RasPi 3
+// physical pin 8 is TX, physical pin 10 is RX
+// these are wired through a voltage level shifter to the RX and TX respectively on the Arduino
+// note also that the system configuration may need to be changed: using Preferences-> Raspberry Pi Configuration
+// select enable for Serial Port and disable for Serial Console.
+
 String inString = "1"; // serial read string
 
 
