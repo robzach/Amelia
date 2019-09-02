@@ -59,6 +59,10 @@ const int LED_STRIP_PIN = 12; // WS2801 LED strip data line is plugged into this
 // to software that's parsing out the returned distance values.)
 const bool DEBUG = false;
 
+// flag to send data only after spoken to: go true when data received, then transmit
+// data back, then go false
+bool transmitNow = false;
+
 PololuLedStrip<LED_STRIP_PIN> ledStrip;
 const int LED_COUNT = 60;
 rgb_color colors[LED_COUNT]; // Create a buffer for holding the colors (3 bytes per color).
@@ -128,7 +132,7 @@ void setup()
 
 void loop()
 {
-  writeSensorValuesOut();
+  if (transmitNow) writeSensorValuesOut();
   readLEDColorIn();
 }
 
@@ -141,6 +145,7 @@ void writeSensorValuesOut() {
     if (i != NUM_SENSORS - 1) Serial.print(' '); // space delimit between values
   }
   Serial.println();
+  transmitNow = false; // switch flag to not send data
 }
 
 void readLEDColorIn() {
@@ -167,6 +172,8 @@ void readLEDColorIn() {
 
       // Write to the LED strip.
       ledStrip.write(colors, LED_COUNT);
+
+      transmitNow = true; // switch flag to send data
 
       if (DEBUG) {
         Serial.print("Showing color: ");
