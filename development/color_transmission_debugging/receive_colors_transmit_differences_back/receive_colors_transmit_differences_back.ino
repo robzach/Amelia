@@ -45,15 +45,61 @@ void setup() {
 
 void loop()
 {
-  if (transmitNow) writeSensorValuesOut();
+  //  if (transmitNow) writeSensorValuesOut();
+  if (transmitNow) writeByteSensorValuesOut();
   readLEDColorIn();
+}
+
+void writeByteSensorValuesOut() {
+
+  // array to hold values prior to reducing them to bytes
+  int distVals[NUM_SENSORS];
+
+  // read sensors, load into integer array
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    distVals[i] = sensor[i].readRangeSingleMillimeters();
+  }
+
+  // slice millimeter values into 255 bins
+  // assumes max meaningful distance is 500mm = 50cm
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    distVals[i] = map(constrain(distVals[i], 0, 500), 0, 500, 0, 254);
+  }
+
+  // buffer to hold values to write out, plus a checksum and a terminator at the end
+  byte writeBuf[NUM_SENSORS + 2];
+
+  // load sliced values into byte array
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    writeBuf[i] = distVals[i];
+  }
+
+  // add checksum to penultimate position in writeBuf array
+  for (int i = 0; i < NUM_SENSORS; i++) {
+    writeBuf[NUM_SENSORS] += writeBuf[i];
+  }
+
+  // finally, write value 255 to final position of array to serve as terminator
+  writeBuf[NUM_SENSORS + 1] = 255;
+
+  //transmit array
+  Serial.write(writeBuf, NUM_SENSORS + 2);
+
+  // transmit plain text for debugging
+  for (int i = 0; i < sizeof(writeBuf) / sizeof(writeBuf[0]); i++){
+    Serial.print(writeBuf[i]);
+    Serial.print(" ");
+  }
+  Serial.println();
+
+  transmitNow = false; // switch flag to not send data
 }
 
 void writeSensorValuesOut() {
 
   //potentially replace this whole function with a delay to see where it becomes problematic
 
-  
+
   for (int i = 0; i < NUM_SENSORS; i++) {
     Serial.print(sensor[i].readRangeSingleMillimeters());
     if (sensor[i].timeoutOccurred() && DEBUG) {
@@ -69,16 +115,49 @@ void readLEDColorIn() {
   if (Serial.available())
   {
 
-    // receive a four-byte array (three values, a delimiter at the end)
-    byte buf[4];
-    Serial.readBytesUntil('\n', buf, 4);
+    //    // receive a four-byte array (three values, a delimiter at the end)
+    //    byte buf[4];
+    //    Serial.readBytesUntil('\n', buf, 4);
+    //    rgb_color color;
+    //    color.red = buf[0];
+    //    color.green = buf[1];
+    //    color.blue = buf[2];
+
+    // receive a five-byte array (three values, a checksum, a delimiter at the end)
+    byte buf[5];
+    Serial.readBytesUntil('\n', buf, 5);
     rgb_color color;
     color.red = buf[0];
     color.green = buf[1];
     color.blue = buf[2];
+    byte checkReceived = buf[3];
+    byte checkExpected = color.red + color.green + color.blue;
 
-    
+    // if you get a good checksum, update the LEDs
+    if (checkReceived == checkExpected) {
+      // Update the colors buffer.
+      for (uint16_t i = 0; i < LED_COUNT; i++)
+      {
+        colors[i] = color;
+      }
 
+      // Write to the LED strip.
+      ledStrip.write(colors, LED_COUNT);
+    }
+    // otherwise, don't update them
+    else {
+      Serial.println((String)"bad checksum. Expected value, received value: " + checkExpected + ", " + checkReceived);
+    }
+
+
+    //    if (color.red != color.green || color.red != color.blue || color.green != color.blue) {
+    //      Serial.print("unequal values, r,g,b: ");
+    //      Serial.print(color.red);
+    //      Serial.print(", ");
+    //      Serial.print(color.green);
+    //      Serial.print(", ");
+    //      Serial.println(color.blue);
+    //    }
 
     // Read the color from the computer.
     //      rgb_color color;
@@ -86,23 +165,8 @@ void readLEDColorIn() {
     //      color.green = Serial.parseInt();
     //      color.blue = Serial.parseInt();
 
-    if (color.red != color.green || color.red != color.blue || color.green != color.blue) {
-      Serial.print("unequal values, r,g,b: ");
-      Serial.print(color.red);
-      Serial.print(", ");
-      Serial.print(color.green);
-      Serial.print(", ");
-      Serial.println(color.blue);
-    }
 
-    // Update the colors buffer.
-    for (uint16_t i = 0; i < LED_COUNT; i++)
-    {
-      colors[i] = color;
-    }
 
-    // Write to the LED strip.
-    ledStrip.write(colors, LED_COUNT);
 
     transmitNow = true; // switch flag to send data
 
