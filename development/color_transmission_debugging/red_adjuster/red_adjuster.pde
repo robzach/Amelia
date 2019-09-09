@@ -31,13 +31,17 @@ void draw() {
   if (newDataRecd) {
     newDataRecd = false;
     timer = millis();
-    redScale();
+    //redScale();
+    //greenScale();
+    blueScale();
   }
 
   // if no new data (perhaps missed a cycle), just send an update every 100 milliseconds
   else {
     if (millis() - timer >= 100) {
-      redScale();
+      //redScale();
+      //greenScale();
+      blueScale();
       println("no new data received at " + millis());
       timer = millis();
     }
@@ -48,12 +52,32 @@ void draw() {
   //if (!newDataRecd) delay(1000);
 }
 
+
+// left side of box = sensor 0 = red
 void redScale() {
   int[] colors = new int[3];
   if (recdInts[0] > -1 && recdInts[0] < 255)
     colors[0] = recdInts[0]; // load received sensor 0 value into red output instruction
-  int sensorsToQuery = 1; // to pass into transmit function
-  transmitBytes(colors, sensorsToQuery);
+  int sensorNum = 1; // to pass into transmit function
+  transmitBytes(colors, sensorNum);
+}
+
+// top of box = sensor 1 = green
+void greenScale() {
+  int[] colors = new int[3];
+  if (recdInts[1] > -1 && recdInts[1] < 255)
+    colors[1] = recdInts[1]; // load received sensor 1 value into green output instruction
+  int sensorNum = 2; // to pass into transmit function
+  transmitBytes(colors, sensorNum);
+}
+
+// right side of box = sensor 2 = blue
+void blueScale() {
+  int[] colors = new int[3];
+  if (recdInts[2] > -1 && recdInts[2] < 255)
+    colors[2] = recdInts[2]; // load received sensor 1 value into green output instruction
+  int sensorNum = 4; // to pass into transmit function
+  transmitBytes(colors, sensorNum);
 }
 
 // feed this function a pointer to a 3-value integer array to transmit it as bytes
@@ -62,27 +86,27 @@ void redScale() {
 // i.e. to read sensors 0 and 2, send value (1*1) + (0*2) + (1*4) = 5
 void transmitBytes (int[] inInts, int sensorsToQuery) {
   if (inInts.length != 3) return;
-
-
+  
+//println("sensorsToQuery=" + sensorsToQuery);
+//println("inInts.length= " + inInts.length);
   // begin by copying to a new array that includes sensorsToQuery at the head
   int[] paddedArray = new int[inInts.length + 1];
   paddedArray[0] = sensorsToQuery;
   for (int i = 1; i < paddedArray.length; i++) 
     paddedArray[i] = inInts[i-1];
+  //printArray(paddedArray);
 
   byte checksum = 0;
   byte[] outBytes = new byte[6];
   for (int i = 0; i<4; i++) { // r, g, b elements are at indices 1, 2, 3
     outBytes[i] = (byte)paddedArray[i];
     checksum += (outBytes[i] * (i+1));
-    //println("checksum = " + checksum);
   }
 
-  // special case: if it's 255, change it to 254 (this will cause a mismatch on the other end which is fine)
+  // special case: if it's 255, change it to 254
   if (checksum == (byte)255) checksum = (byte)254;
   outBytes[4] = checksum; // penultimate byte is checksum
   outBytes[5] = (byte)255; // last byte is terminator
-
   myPort.write(outBytes);
 }
 
