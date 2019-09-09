@@ -13,9 +13,9 @@ PololuLedStrip<LED_STRIP_PIN> ledStrip;
 const int LED_COUNT = 60;
 rgb_color colors[LED_COUNT]; // Create a buffer for holding the colors (3 bytes per color).
 
-const int NUM_SENSORS = 4;
+const int NUM_SENSORS = 3;
 const byte START_ADDRESS = 29; // first I2C address to provision (the rest will increment)
-const long SERIAL_SPEED = 9600; // serial communication baud rate
+const long SERIAL_SPEED = 57600; // serial communication baud rate
 
 const int DEBUGPIN1 = 10; // used for oscope monitoring of various events
 
@@ -25,7 +25,7 @@ bool newDataRecd = false;
 int counter = 0;
 
 // incoming color data from Processing:
-// three color bytes 0–254 each, a checksum, and a 255 terminator
+// a sensor instruction byte, three color bytes 0–254 each, a checksum, and a 255 terminator
 byte readIn[6];
 
 // data to return to Processing:
@@ -78,7 +78,6 @@ void loop() {
   if (newDataRecd) {
     writeColorsToLEDs();
     scanSensorsTransmitResponse();
-    //    Serial.write(sendData, 5);
     newDataRecd = false;
   }
 }
@@ -118,11 +117,18 @@ void scanSensorsTransmitResponse() {
   bool readSensor1 = (readIn[0] >> 1) & 0b1; // twos bit
   bool readSensor2 = (readIn[0] >> 2) & 0b1; // fours bit
 
+//  readSensor0 = readSensor1 = readSensor2 = true;
+
   // array to hold values prior to reducing them to bytes
   int distVals[3];
   if (readSensor0) distVals[0] = sensor[0].readRangeSingleMillimeters();
   if (readSensor1) distVals[1] = sensor[1].readRangeSingleMillimeters();
   if (readSensor2) distVals[2] = sensor[2].readRangeSingleMillimeters();
+
+//  for (int i = 0; i < 3; i++){
+//    Serial.print(distVals[i]);
+//    Serial.print(" "); 
+//  } Serial.println();
 
   // slice millimeter values into 255 bins
   // assumes max meaningful distance is 500mm = 50cm
@@ -153,7 +159,7 @@ void scanSensorsTransmitResponse() {
   //    sendData[i] = writeBuf[i];
   //  }
   //
-  //  sendData[5] = 255; // last bit is terminator
+//    sendData[5] = 255; // last bit is terminator
 }
 
 // checksum should be at penultimate array position, and 255 (terminator) at the end

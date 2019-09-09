@@ -5,6 +5,9 @@ String portName = "/dev/cu.usbserial-1410"; // for USB access to the Arduino
 byte[] recdVals = new byte[5];
 int [] recdInts = new int[5];
 
+int[] colors = new int[3]; // colors to write out to Arduino
+int sensorsToQuery = 0; // which distance sensors to query
+
 boolean newDataRecd = true;
 
 long timer = 0;
@@ -16,13 +19,16 @@ void setup () {
 
   printArray(recdVals);
 
-  myPort = new Serial(this, portName, 9600);
+  myPort = new Serial(this, portName, 57600);
   // don't generate a serialEvent() unless you get a 255 (terminator) byte:
   myPort.bufferUntil((byte)255);
 }
 
 void draw() {
   background(0);
+  sensorsToQuery = 0; // to be incremented as needed by color-drawing functions below
+  // sensor 0 = ones, sensor 1 = twos, sensor 2 = fours
+  // i.e. to read sensors 0 and 2, set to value (1*1) + (0*2) + (1*4) = 5
 
   //if (checksumValid(recdInts)) redScale();
 
@@ -32,73 +38,67 @@ void draw() {
     newDataRecd = false;
     timer = millis();
     //redScale();
-    //greenScale();
+    greenScale();
     blueScale();
+    transmitBytes();
   }
 
-  // if no new data (perhaps missed a cycle), just send an update every 100 milliseconds
+  // if no new data (perhaps missed a cycle), just send an update every 200 milliseconds
   else {
-    if (millis() - timer >= 100) {
+    if (millis() - timer >= 200) {
       //redScale();
-      //greenScale();
+      greenScale();
       blueScale();
+      transmitBytes();
       println("no new data received at " + millis());
       timer = millis();
     }
   }
-
-  //redScale();
+  
   updateWindow();
-  //if (!newDataRecd) delay(1000);
 }
 
 
 // left side of box = sensor 0 = red
 void redScale() {
-  int[] colors = new int[3];
   if (recdInts[0] > -1 && recdInts[0] < 255)
     colors[0] = recdInts[0]; // load received sensor 0 value into red output instruction
-  int sensorNum = 1; // to pass into transmit function
-  transmitBytes(colors, sensorNum);
+  sensorsToQuery += 1;
 }
 
 // top of box = sensor 1 = green
 void greenScale() {
-  int[] colors = new int[3];
   if (recdInts[1] > -1 && recdInts[1] < 255)
     colors[1] = recdInts[1]; // load received sensor 1 value into green output instruction
-  int sensorNum = 2; // to pass into transmit function
-  transmitBytes(colors, sensorNum);
+  sensorsToQuery += 2;
 }
 
 // right side of box = sensor 2 = blue
 void blueScale() {
-  int[] colors = new int[3];
   if (recdInts[2] > -1 && recdInts[2] < 255)
     colors[2] = recdInts[2]; // load received sensor 1 value into green output instruction
-  int sensorNum = 4; // to pass into transmit function
-  transmitBytes(colors, sensorNum);
+  sensorsToQuery += 4;
 }
 
-// feed this function a pointer to a 3-value integer array to transmit it as bytes
-// its second argument says which sensors need to be read:
-// sensor 0 = ones, sensor 1 = twos, sensor 2 = fours
-// i.e. to read sensors 0 and 2, send value (1*1) + (0*2) + (1*4) = 5
-void transmitBytes (int[] inInts, int sensorsToQuery) {
-  if (inInts.length != 3) return;
-  
-//println("sensorsToQuery=" + sensorsToQuery);
-//println("inInts.length= " + inInts.length);
-  // begin by copying to a new array that includes sensorsToQuery at the head
-  int[] paddedArray = new int[inInts.length + 1];
-  paddedArray[0] = sensorsToQuery;
-  for (int i = 1; i < paddedArray.length; i++) 
-    paddedArray[i] = inInts[i-1];
-  //printArray(paddedArray);
 
+void transmitBytes () {
+
+  // begin by copying colors to a new array that includes sensorsToQuery at the head
+  int[] paddedArray = new int[4];
+  paddedArray[0] = sensorsToQuery;
+  for (int i = 1; i < 4; i++) 
+    paddedArray[i] = colors[i-1];
+
+  // outgoing bytes in order:
+  // 0: sensorNum (which sensors Arduino should query)
+  // 1: red value (0-254);
+  // 2: green value (0-254)
+  // 3: blue value (0-254)
+  // 4: checksum (see below for calculation)
+  // 5: terminator byte 255
   byte checksum = 0;
   byte[] outBytes = new byte[6];
-  for (int i = 0; i<4; i++) { // r, g, b elements are at indices 1, 2, 3
+  for (int i = 0; i<4; i++) {
     outBytes[i] = (byte)paddedArray[i];
     checksum += (outBytes[i] * (i+1));
   }
@@ -158,7 +158,7 @@ void updateWindow() {
     "sensor[0] value received: " + recdInts[0] + 
     "\nsensor[1] value received: " + recdInts[1] + 
     "\nsensor[2] value received: " + recdInts[2] + 
-    "\nsensor[3] value received: " + recdInts[3];
+    "\nchecksum value received: " + recdInts[3];
 
   textSize(24);
   text (displayData, 50, 50);
