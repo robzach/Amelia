@@ -26,9 +26,16 @@ int counter = 0;
 
 // incoming color data from Processing:
 // three color bytes 0–254 each, a checksum, and a 255 terminator
-byte readIn[5];
+byte readIn[6];
+
+// data to return to Processing:
+// three sensor positions, a checksum, and a 255 terminator
+byte sendData[5];
+
+
 
 VL53L0X sensor[NUM_SENSORS];
+int sensorValues[NUM_SENSORS] = {}; // values to transmit
 
 
 void setup() {
@@ -70,36 +77,33 @@ void loop() {
   // the serial event catches incoming color data and flips newDataRecd true
   if (newDataRecd) {
     writeColorsToLEDs();
-    writeSensorValuesOut();
+    scanSensorsTransmitResponse();
+    //    Serial.write(sendData, 5);
     newDataRecd = false;
   }
 }
 
 void serialEvent() {
   while (Serial.available()) {
-    digitalWrite(DEBUGPIN1, HIGH);
     readIn[counter] = Serial.read();
   }
   if (readIn[counter] == 255) { // terminator received
     if (checksumValid(readIn)) newDataRecd = true;
+    counter = 0; // and reset counter
 
     // reply with checksum result followed by terminator
     //    Serial.write(checksumValid(readIn)); Serial.write(255);
     //    Serial.write(readIn, counter); // write values prior to terminator
     //    Serial.write(255); // and write a terminator at the end
-
-    counter = 0; // and reset counter
   }
   else counter++; // otherwise, proceed through loop
-      digitalWrite(DEBUGPIN1, LOW);
-
 }
 
 void writeColorsToLEDs() {
   rgb_color color;
-  color.red = readIn[0];
-  color.green = readIn[1];
-  color.blue = readIn[2];
+  color.red = readIn[1];
+  color.green = readIn[2];
+  color.blue = readIn[3];
 
   for (uint16_t i = 0; i < LED_COUNT; i++) colors[i] = color;
 
@@ -108,68 +112,69 @@ void writeColorsToLEDs() {
   ledStrip.write(colors, LED_COUNT);
 }
 
-void writeSensorValuesOut() {
+void scanSensorsTransmitResponse() {
+  // scan only the sensors indicated by the zeroth byte received from Processing
+  bool readSensor0 = readIn[0] & 0b1; // ones bit
+  bool readSensor1 = (readIn[0] >> 1) & 0b1; // twos bit
+  bool readSensor2 = (readIn[0] >> 2) & 0b1; // fours bit
 
   // array to hold values prior to reducing them to bytes
-  int distVals[NUM_SENSORS];
-
-  // time to do these four reads is consistently ~133ms!!!!! Major bottleneck located…
-  // adjusting to faster I2C speed via command `Wire.setClock(400000L);` shaves only ~11ms
-  // and running `#define HIGH_SPEED` only gets down to ~90ms total, which is still quite long
-  // reading only 1 sensor takes ~24ms
-  // reading 2 sensors takes ~47ms
-  // reading 3 sensors takes ~70ms
-  // and reading 4 sensors takes ~90ms, as observed previously
-  // read sensors, load into integer array
-  for (int i = 0; i < NUM_SENSORS; i++) {
-    distVals[i] = sensor[i].readRangeSingleMillimeters();
-  }
+  int distVals[3];
+  if (readSensor0) distVals[0] = sensor[0].readRangeSingleMillimeters();
+  if (readSensor1) distVals[1] = sensor[1].readRangeSingleMillimeters();
+  if (readSensor2) distVals[2] = sensor[2].readRangeSingleMillimeters();
 
   // slice millimeter values into 255 bins
   // assumes max meaningful distance is 500mm = 50cm
-  for (int i = 0; i < NUM_SENSORS; i++) {
+  for (int i = 0; i < 3; i++) {
     distVals[i] = map(constrain(distVals[i], 0, 500), 0, 500, 0, 254);
   }
 
   // buffer to hold values to write out, plus a checksum and a terminator at the end
-  byte writeBuf[NUM_SENSORS + 2] = {}; // need this to zero all values instead of holding over!!
+  byte writeBuf[3 + 2] = {}; // need this to zero all values instead of holding over!!
 
   // load sliced values into byte array
-  for (int i = 0; i < NUM_SENSORS; i++) {
+  for (int i = 0; i < 3; i++) {
     writeBuf[i] = distVals[i];
   }
 
   // add checksum to penultimate position in writeBuf array
-  for (int i = 0; i < NUM_SENSORS; i++) {
-    writeBuf[NUM_SENSORS] += (writeBuf[i] * (i + 1));
+  for (int i = 0; i < 3; i++) {
+    writeBuf[3] += (writeBuf[i] * (i + 1));
   } // checksum is computed: (0th data point + (1st data point * 2) + (2nd data point * 3) + ...)
 
   // finally, write value 255 to final position of array to serve as terminator
-  writeBuf[NUM_SENSORS + 1] = 255;
+  writeBuf[3 + 1] = 255;
 
-  // transmit array
-  // this appears only to take 2ms according to the scope, though it should take ~6ms at 9600 baud
-  Serial.write(writeBuf, NUM_SENSORS + 2);
+  Serial.write(writeBuf, 5);
 
-  // transmit plain text for debugging
-  //  for (int i = 0; i < sizeof(writeBuf) / sizeof(writeBuf[0]); i++) {
-  //    Serial.print(writeBuf[i]);
-  //    Serial.print(" ");
+  //
+  //  for (int i = 0; i<5; i++){
+  //    sendData[i] = writeBuf[i];
   //  }
-  //  Serial.println();
+  //
+  //  sendData[5] = 255; // last bit is terminator
 }
 
+// checksum should be at penultimate array position, and 255 (terminator) at the end
 boolean checksumValid (byte * arrayIn) {
-  int length = sizeof(arrayIn) / sizeof(arrayIn[0]); // this isn't working, don't know why
+  // you can't run sizeof(array) because you just get the size of the pointer to that array
+  // instead find the passed in array's length by finding the position of the 255 terminator
+  int length = 0;
+  while (arrayIn[length] < 255) length++;
+  length++; // after above while() exits, length contains the index of the 255 value; increment to calculate length of array
+
   byte localChecksum = 0;
+  // add zeroth through second-to-last element in incoming data
+  for (int i = 0; i < length - 2; i++) {
+    localChecksum += (arrayIn[i] * (i + 1));
+  }
 
-  // add zeroth through pen-penultimate element in incoming data
-  //    for (int i = 0; i < length - 2; i++) {
-  //      localChecksum += (arrayIn[i] * (i + 1));
-  //    }
+  // special case: change 255 checksum to 254
+  if (localChecksum == 255) localChecksum = 254;
 
-  localChecksum = arrayIn[0] + (arrayIn[1] * 2) + (arrayIn[2] * 3);
+  //  localChecksum = arrayIn[0] + (arrayIn[1] * 2) + (arrayIn[2] * 3);
 
   // penultimate element of array is checksum, so compare to penultimate value read in for result
-  return (localChecksum == arrayIn[3]);
+  return (localChecksum == arrayIn[length - 2]);
 }
