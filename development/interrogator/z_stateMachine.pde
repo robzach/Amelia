@@ -51,6 +51,8 @@ void orientation() {
   if (stageCounter == 0) {
     startTime = millis(); 
     stageCounter = 1;
+    for (int i = 0; i < 3; i++) colors[i] = 0;
+    transmitBytes();
   }
 
   // start with left-side-of-box sensor training for 10 seconds
@@ -59,41 +61,38 @@ void orientation() {
     else {
       stageCounter = 2;
       startTime = millis();
-      // zero out colors to send black to start with
-      //colors[0] = 0; 
-      //colors[1] = 0; 
-      //colors[2] = 0;
-      //transmitBytes();
+      for (int i = 0; i < 3; i++) colors[i] = 0;
+      transmitBytes();
     }
-
-
-    // right-side-of-box sensor training for 10 seconds
-    if (stageCounter == 2) {
-      if (millis() - startTime < 5000) blueScale();
-      else {
-        stageCounter = 3;
-        startTime = millis();
-        // zero out colors to send black to start with
-        //colors[0] = 0; 
-        //colors[1] = 0; 
-        //colors[2] = 0;
-        //transmitBytes();
-      }
-    }
-
-    // top-side-of-box sensor training for 10 seconds
-    if (stageCounter == 3) {
-      if (millis() - startTime < 5000) greenScale();
-      else {
-        stageCounter = 4;
-        startTime = millis();
-      }
-    }
-
-    //once complete, revert to IDLE mode
-    if (stageCounter == 4) mode = Mode.IDLE;
   }
+
+
+  // right-side-of-box sensor training for 10 seconds
+  if (stageCounter == 2) {
+    if (millis() - startTime < 5000) blueScale();
+    else {
+      stageCounter = 3;
+      startTime = millis();
+      for (int i = 0; i < 3; i++) colors[i] = 0;
+      transmitBytes();
+    }
+  }
+
+  // top-side-of-box sensor training for 10 seconds
+  if (stageCounter == 3) {
+    if (millis() - startTime < 5000) greenScale();
+    else {
+      stageCounter = 4;
+      startTime = millis();
+      for (int i = 0; i < 3; i++) colors[i] = 0;
+      transmitBytes();
+    }
+  }
+
+  //once complete, revert to IDLE mode
+  if (stageCounter == 4) mode = Mode.IDLE;
 }
+
 
 void interrogation() {
 }

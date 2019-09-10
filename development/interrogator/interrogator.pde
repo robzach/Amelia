@@ -43,7 +43,7 @@ boolean newDataRecd = true;
 boolean startSignalReceived = true; // boolean to be triggered by websocket event
 boolean interrogationCompleted = false; // 
 
-long timer = 0;
+long retransmitTimer = 0;
 
 void setup () {
   // you can adjust height as wanted, and the graphs will scale appropriately
@@ -66,19 +66,21 @@ void draw() {
   // if data is received, write out a color instruction immediately
   // but don't write another until new data comes back
   if (newDataRecd) {
-    newDataRecd = false;
-    timer = millis();
+    newDataRecd = false;    
+    retransmitTimer = millis();
+    //sensorsToQuery = 0;
     stateMachine();
     transmitBytes();
   }
 
   // if no new data (perhaps missed a cycle), just send an update every 200 milliseconds
   else {
-    if (millis() - timer >= 200) {
+    if (millis() - retransmitTimer >= 200) {
+      //sensorsToQuery = 0;
       stateMachine();
       transmitBytes();
       println("no new data received at " + millis());
-      timer = millis();
+      retransmitTimer = millis();
     }
   }
   updateWindow();
@@ -185,11 +187,13 @@ void updateWindow() {
     "\nsensor[1] value received: " + recdInts[1] + 
     "\nsensor[2] value received: " + recdInts[2] + 
     "\nchecksum value received: " + recdInts[3] +
-    "\nmode: " + mode +
+    "\n\ncolors[0,1,2]: " + colors[0] + ", " + colors[1] + ", " + colors[2] +
+    "\nsensorsToQuery: " + sensorsToQuery +
+    "\n\nmode: " + mode +
     "\nstageCounter: " + stageCounter +
     "\nmillis(): " + millis() +
     "\nmillis() - startTime: " + (millis() - startTime);
 
-  textSize(24);
+  textSize(20);
   text (displayData, 50, 50);
 }
