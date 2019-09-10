@@ -68,7 +68,6 @@ void draw() {
   if (newDataRecd) {
     newDataRecd = false;    
     retransmitTimer = millis();
-    //sensorsToQuery = 0;
     stateMachine();
     transmitBytes();
   }
@@ -76,7 +75,6 @@ void draw() {
   // if no new data (perhaps missed a cycle), just send an update every 200 milliseconds
   else {
     if (millis() - retransmitTimer >= 200) {
-      //sensorsToQuery = 0;
       stateMachine();
       transmitBytes();
       println("no new data received at " + millis());
