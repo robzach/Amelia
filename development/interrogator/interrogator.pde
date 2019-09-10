@@ -1,3 +1,20 @@
+/*
+
+"Interrogator" software for use in production of "Project Amelia"
+produced by Probable Models and Bricolage Theater
+Pittsburgh, 2019
+
+This software communicates with an Arduino-based hardware peripheral which:
+1) accepts color instructions to illuminate LEDs, and
+2) transmits back rangefinder data from three sensors
+
+much more information at https://github.com/robzach/Amelia
+
+Robert Zacharias, rz@rzach.me
+
+*/
+
+
 import processing.serial.*;
 // printArray(Serial.list()); // will print the list of ports as needed
 Serial myPort;
@@ -9,16 +26,31 @@ int [] recdInts = new int[5];
 int[] colors = new int[3]; // colors to write out to Arduino
 int sensorsToQuery = 0; // which distance sensors to query
 
+// named variables to store positions[0,1,2,3] in that order
+// perspective is from the user's side of the cube
+int left, front, right, top; 
+
+// enumerated variable to track state machine mode
+enum Mode { 
+  IDLE, ORIENTATION, INTERROGATION, TERMINATION
+};
+Mode mode = Mode.IDLE; // initial state
+Mode prevMode; // to track changes
+int stageCounter = 0; // for tracking within modes
+
 boolean newDataRecd = true;
+
+boolean startSignalReceived = true; // boolean to be triggered by websocket event
+boolean interrogationCompleted = false; // 
 
 long timer = 0;
 
 void setup () {
   // you can adjust height as wanted, and the graphs will scale appropriately
-  size(1200, 500); 
+  size(600, 500); 
   background(0);
 
-  printArray(recdVals);
+  printArray(recdVals); // should start empty
 
   myPort = new Serial(this, portName, 57600);
   // don't generate a serialEvent() unless you get a 255 (terminator) byte:
