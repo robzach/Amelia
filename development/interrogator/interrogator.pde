@@ -1,18 +1,18 @@
 /*
 
-"Interrogator" software for use in production of "Project Amelia"
-produced by Probable Models and Bricolage Theater
-Pittsburgh, 2019
-
-This software communicates with an Arduino-based hardware peripheral which:
-1) accepts color instructions to illuminate LEDs, and
-2) transmits back rangefinder data from three sensors
-
-much more information at https://github.com/robzach/Amelia
-
-Robert Zacharias, rz@rzach.me
-
-*/
+ "Interrogator" software for use in production of "Project Amelia"
+ produced by Probable Models and Bricolage Theater
+ Pittsburgh, 2019
+ 
+ This software communicates with an Arduino-based hardware peripheral which:
+ 1) accepts color instructions to illuminate LEDs, and
+ 2) transmits back rangefinder data from three sensors
+ 
+ much more information at https://github.com/robzach/Amelia
+ 
+ Robert Zacharias, rz@rzach.me
+ 
+ */
 
 
 import processing.serial.*;
@@ -34,7 +34,7 @@ int left, front, right, top;
 enum Mode { 
   IDLE, ORIENTATION, INTERROGATION, TERMINATION
 };
-Mode mode = Mode.IDLE; // initial state
+Mode mode = Mode.ORIENTATION; // initial state
 Mode prevMode; // to track changes
 int stageCounter = 0; // for tracking within modes
 
@@ -63,31 +63,24 @@ void draw() {
   // sensor 0 = ones, sensor 1 = twos, sensor 2 = fours
   // i.e. to read sensors 0 and 2, set to value (1*1) + (0*2) + (1*4) = 5
 
-  //if (checksumValid(recdInts)) redScale();
-
   // if data is received, write out a color instruction immediately
   // but don't write another until new data comes back
   if (newDataRecd) {
     newDataRecd = false;
     timer = millis();
-    //redScale();
-    greenScale();
-    blueScale();
+    stateMachine();
     transmitBytes();
   }
 
   // if no new data (perhaps missed a cycle), just send an update every 200 milliseconds
   else {
     if (millis() - timer >= 200) {
-      //redScale();
-      greenScale();
-      blueScale();
+      stateMachine();
       transmitBytes();
       println("no new data received at " + millis());
       timer = millis();
     }
   }
-  
   updateWindow();
 }
 
@@ -191,7 +184,11 @@ void updateWindow() {
     "sensor[0] value received: " + recdInts[0] + 
     "\nsensor[1] value received: " + recdInts[1] + 
     "\nsensor[2] value received: " + recdInts[2] + 
-    "\nchecksum value received: " + recdInts[3];
+    "\nchecksum value received: " + recdInts[3] +
+    "\nmode: " + mode +
+    "\nstageCounter: " + stageCounter +
+    "\nmillis(): " + millis() +
+    "\nmillis() - startTime: " + (millis() - startTime);
 
   textSize(24);
   text (displayData, 50, 50);
