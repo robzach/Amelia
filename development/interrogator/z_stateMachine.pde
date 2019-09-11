@@ -18,7 +18,7 @@ void stateMachine() {
       prevMode = mode;
       stageCounter = 0; // reset stage counter for new mode
     }
-    interrogation(); 
+    interrogation();
     break;
   case TERMINATION: 
     if (change) {
@@ -88,12 +88,12 @@ void orientation() {
   }
 
   //once complete, revert to IDLE mode
-  if (stageCounter == 4) mode = Mode.IDLE;
+  if (stageCounter == 4) mode = Mode.INTERROGATION;
 }
 
 
 void interrogation() {
-  // pulse different lights up and down through a sequence of brighnesses
+  // pulse different lights up and down through a sequence of brightnesses
 
   if (stageCounter == 0) {
     startTime = millis(); 
@@ -103,16 +103,15 @@ void interrogation() {
   }
 
   if (stageCounter == 1) {
-    breaths[0] = new Breathe(0, 2000);  // begin red breathing sequence
+    breaths[0] = new Breathe(true, 0, 2000);  // begin red breathing sequence
     startTime = millis();
     stageCounter = 2;
   }
 
   if (stageCounter == 2) {
-    if (millis() - startTime < 10000) { // if it's been less than 10 seconds
-      breaths[0].pollBreathe(); // update that one breath command
-    } else { // it's been more than 10 seconds
-      breaths[1] = new Breathe(2, 1500); // begin blue breathing sequence
+    if (millis() - startTime > 10000) { //10 seconds later
+      breaths[0].setActive(false);
+      breaths[1] = new Breathe(true, 1, 1000);
       for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
       startTime = millis();
       stageCounter = 3;
@@ -120,10 +119,9 @@ void interrogation() {
   }
 
   if (stageCounter == 3) {
-    if (millis() - startTime < 10000) { 
-      breaths[1].pollBreathe(); // run breaths[1]
-    } else {
-      breaths[2] = new Breathe(1, 1000);
+    if (millis() - startTime > 10000) { //10 seconds later
+      breaths[1].setActive(false);
+      breaths[2] = new Breathe(true, 2, 750);
       for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
       startTime = millis();
       stageCounter = 4;
@@ -131,18 +129,112 @@ void interrogation() {
   }
 
   if (stageCounter == 4) {
-    if (millis() - startTime < 10000) { 
-      breaths[2].pollBreathe(); // run breaths[2]
-    } else {
+    if (millis() - startTime > 10000) { //10 seconds later
+      breaths[2].setActive(false);
+      breaths[1] = new Breathe(true, 0, 1000);
+      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+      startTime = millis();
       stageCounter = 5;
     }
   }
 
-  if (stageCounter == 5) mode = Mode.IDLE;
+  if (stageCounter == 5) {
+    if (millis() - startTime > 10000) { //10 seconds later
+      breaths[1].setActive(false);
+      breaths[0] = new Breathe(true, 0, 1000);
+      delay(500);
+      breaths[2] = new Breathe(true, 2, 1000);
+      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+      startTime = millis();
+      stageCounter = 6;
+    }
+  }
 
-  // updates all breathing functions
-  //for (Breathe breath : breaths) breath.pollBreathe();
+  if (stageCounter == 6) {
+    if (millis() - startTime > 10000) { // 10 seconds later
+      breaths[0].setActive(false);
+      breaths[2].setActive(false);
+      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+      stageCounter = 7;
+    }
+  }
+
+  if (stageCounter == 7) mode = Mode.TERMINATION;
+
+
+  // updates all breathing functions, only for those objects currently wanting to be run
+  for (Breathe breath : breaths) {
+    if (breath.getActive()) {
+      breath.pollBreathe();
+    }
+  }
 }
 
 void termination() {
+  
+  // flashes red a bunch of times quickly
+  // (blocking code! Probably doesn't matter at this point, though)
+  for (int i = 0; i < 20; i++) {
+    colors[0] = 254;
+    transmitBytes();
+    delay(50);
+    colors[0] = 0;
+    transmitBytes();
+    delay(50);
+  }
+  mode = Mode.IDLE;
 }
+
+
+/*
+old version using individually called pollBreathe() functions
+ void interrogation() {
+ // pulse different lights up and down through a sequence of brighnesses
+ 
+ if (stageCounter == 0) {
+ startTime = millis(); 
+ for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+ transmitBytes();
+ stageCounter = 1;
+ }
+ 
+ if (stageCounter == 1) {
+ breaths[0] = new Breathe(true, 0, 2000);  // begin red breathing sequence
+ startTime = millis();
+ stageCounter = 2;
+ }
+ 
+ if (stageCounter == 2) {
+ if (millis() - startTime < 10000) { // if it's been less than 10 seconds
+ breaths[0].pollBreathe(); // update that one breath command
+ println(breaths[0].testBreathe());
+ } else { // it's been more than 10 seconds
+ breaths[1] = new Breathe(2, 1500); // begin blue breathing sequence
+ for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+ startTime = millis();
+ stageCounter = 3;
+ }
+ }
+ 
+ if (stageCounter == 3) {
+ if (millis() - startTime < 10000) { 
+ breaths[1].pollBreathe(); // run breaths[1]
+ } else {
+ breaths[2] = new Breathe(1, 1000);
+ for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+ startTime = millis();
+ stageCounter = 4;
+ }
+ }
+ 
+ if (stageCounter == 4) {
+ if (millis() - startTime < 10000) { 
+ breaths[2].pollBreathe(); // run breaths[2]
+ } else {
+ stageCounter = 5;
+ }
+ }
+ 
+ if (stageCounter == 5) mode = Mode.IDLE;
+ }
+ */

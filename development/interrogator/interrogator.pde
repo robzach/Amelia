@@ -34,7 +34,7 @@ int left, front, right, top;
 enum Mode { 
   IDLE, ORIENTATION, INTERROGATION, TERMINATION
 };
-Mode mode = Mode.INTERROGATION; // initial state
+Mode mode = Mode.ORIENTATION; // initial state
 Mode prevMode; // to track changes
 int stageCounter = 0; // for tracking within modes
 
@@ -47,23 +47,59 @@ long retransmitTimer = 0;
 
 // timer class for instantiating "breathing" light behavior
 public class Breathe {
+  boolean active; // true for this breathing should run now, false otherwise
   int _color; // 0 = red, 1 = blue, 2 = green
   long period; // in milliseconds
   long startMillis;
 
   // constructor takes two arguments
-  public Breathe(int _color, long period) {
-    this._color = _color;
-    this.period = period;
-    this.startMillis = millis(); // constructor remembers when it was made
+  public Breathe(boolean active, int _color, long period) {
+    this.active = active;  // true for this breathing should run now, false otherwise
+    this._color = _color; // 0 = red, 1 = blue, 2 = green
+    this.period = period; // in milliseconds
+    this.startMillis = millis(); // constructor remembers when it was made for timing use
   }
 
   // poll this function as often as possible to update the lights as needed
   void pollBreathe() {
     float position = (millis() - startMillis) % period; // only use the positive half of the sine curve
-    float multiplier = sin( (PI * position) / period); // 
+    float multiplier = sin( (PI * position) / period); // multiplier is in range 0 to 1
     colors[_color] = (int)(254 * multiplier);
+
+    // update which sensors the Arduino should return data from
+    switch (_color) {
+    case 0: // red
+      sensorsToQuery += 1;
+      break;
+    case 1: // green
+      sensorsToQuery += 2;
+      break;
+    case 2: // blue
+      sensorsToQuery += 4;
+      break;
+    default:
+      break;
+    }
     //println("setting color[" + _color + "]: " + colors[_color]);
+  }
+
+  // return true if user is near to being on target at breathing task, false otherwise
+  boolean testBreathe() {
+    int goalPos = colors[_color]; // latest color instruction is also latest distance instruction
+    int recdPos = recdInts[_color]; // latest received distance data from Arduino
+
+    int diff = abs(goalPos - recdPos);
+
+    if (diff < 20) return true;
+    return false;
+  }
+
+  boolean getActive() {
+    return active;
+  }
+  
+  void setActive(boolean newState){
+    active = newState;
   }
 }
 Breathe[] breaths;
@@ -72,12 +108,15 @@ Breathe[] breaths;
 void setup () {
   size(600, 500); 
   background(0);
-  
+
   myPort = new Serial(this, portName, 57600);
   // don't generate a serialEvent() unless you get a 255 (terminator) byte:
   myPort.bufferUntil((byte)255);
 
   breaths = new Breathe[3];
+  breaths[0] = new Breathe(false, -1, 100000);
+  breaths[1] = new Breathe(false, -1, 100000);
+  breaths[2] = new Breathe(false, -1, 100000);
 }
 
 void draw() {
