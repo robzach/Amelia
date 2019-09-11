@@ -34,7 +34,7 @@ int left, front, right, top;
 enum Mode { 
   IDLE, ORIENTATION, INTERROGATION, TERMINATION
 };
-Mode mode = Mode.ORIENTATION; // initial state
+Mode mode = Mode.INTERROGATION; // initial state
 Mode prevMode; // to track changes
 int stageCounter = 0; // for tracking within modes
 
@@ -45,7 +45,32 @@ boolean interrogationCompleted = false; //
 
 long retransmitTimer = 0;
 
+// timer class for instantiating "breathing" light behavior
+public class Breathe {
+  int _color; // 0 = red, 1 = blue, 2 = green
+  long period; // in milliseconds
+  long startMillis;
+
+  // constructor takes two arguments
+  public Breathe(int _color, long period) {
+    this._color = _color;
+    this.period = period;
+    this.startMillis = millis(); // constructor remembers when it was made
+  }
+
+  // poll this function as often as possible to update the lights as needed
+  void pollBreathe() {
+    float position = (millis() - startMillis) % period; // only use the positive half of the sine curve
+    float multiplier = sin( (PI * position) / period); // 
+    colors[_color] = (int)(254 * multiplier);
+    println("setting color[" + _color + "]: " + colors[_color]);
+  }
+}
+Breathe[] breaths;
+
+
 void setup () {
+  breaths = new Breathe[1];
   // you can adjust height as wanted, and the graphs will scale appropriately
   size(600, 500); 
   background(0);

@@ -16,6 +16,7 @@ void stateMachine() {
     if (change) {
       println("entering mode: " + mode);
       prevMode = mode;
+      stageCounter = 0; // reset stage counter for new mode
     }
     interrogation(); 
     break;
@@ -92,7 +93,12 @@ void orientation() {
 
 
 void interrogation() {
-  
+  // pulse red light up and down through a sequence of brighnesses
+  if (stageCounter == 0){
+    breaths[0] = new Breathe(0, 1000);
+    stageCounter = 1;
+  }
+  for (Breathe breath : breaths) breath.pollBreathe();
 }
 
 void termination() {
