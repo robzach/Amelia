@@ -93,12 +93,55 @@ void orientation() {
 
 
 void interrogation() {
-  // pulse red light up and down through a sequence of brighnesses
-  if (stageCounter == 0){
-    breaths[0] = new Breathe(0, 1000);
+  // pulse different lights up and down through a sequence of brighnesses
+
+  if (stageCounter == 0) {
+    startTime = millis(); 
+    for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+    transmitBytes();
     stageCounter = 1;
   }
-  for (Breathe breath : breaths) breath.pollBreathe();
+
+  if (stageCounter == 1) {
+    breaths[0] = new Breathe(0, 2000);  // begin red breathing sequence
+    startTime = millis();
+    stageCounter = 2;
+  }
+
+  if (stageCounter == 2) {
+    if (millis() - startTime < 10000) { // if it's been less than 10 seconds
+      breaths[0].pollBreathe(); // update that one breath command
+    } else { // it's been more than 10 seconds
+      breaths[1] = new Breathe(2, 1500); // begin blue breathing sequence
+      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+      startTime = millis();
+      stageCounter = 3;
+    }
+  }
+
+  if (stageCounter == 3) {
+    if (millis() - startTime < 10000) { 
+      breaths[1].pollBreathe(); // run breaths[1]
+    } else {
+      breaths[2] = new Breathe(1, 1000);
+      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
+      startTime = millis();
+      stageCounter = 4;
+    }
+  }
+
+  if (stageCounter == 4) {
+    if (millis() - startTime < 10000) { 
+      breaths[2].pollBreathe(); // run breaths[2]
+    } else {
+      stageCounter = 5;
+    }
+  }
+
+  if (stageCounter == 5) mode = Mode.IDLE;
+
+  // updates all breathing functions
+  //for (Breathe breath : breaths) breath.pollBreathe();
 }
 
 void termination() {

@@ -63,23 +63,21 @@ public class Breathe {
     float position = (millis() - startMillis) % period; // only use the positive half of the sine curve
     float multiplier = sin( (PI * position) / period); // 
     colors[_color] = (int)(254 * multiplier);
-    println("setting color[" + _color + "]: " + colors[_color]);
+    //println("setting color[" + _color + "]: " + colors[_color]);
   }
 }
 Breathe[] breaths;
 
 
 void setup () {
-  breaths = new Breathe[1];
-  // you can adjust height as wanted, and the graphs will scale appropriately
   size(600, 500); 
   background(0);
-
-  printArray(recdVals); // should start empty
-
+  
   myPort = new Serial(this, portName, 57600);
   // don't generate a serialEvent() unless you get a 255 (terminator) byte:
   myPort.bufferUntil((byte)255);
+
+  breaths = new Breathe[3];
 }
 
 void draw() {
@@ -210,7 +208,7 @@ void updateWindow() {
     "\nsensor[1] value received: " + recdInts[1] + 
     "\nsensor[2] value received: " + recdInts[2] + 
     "\nchecksum value received: " + recdInts[3] +
-    "\n\ncolors[0,1,2]: " + colors[0] + ", " + colors[1] + ", " + colors[2] +
+    "\n\ncolors[0,1,2]: " + colors[0] + "  " + colors[1] + "  " + colors[2] +
     "\nsensorsToQuery: " + sensorsToQuery +
     "\n\nmode: " + mode +
     "\nstageCounter: " + stageCounter +
