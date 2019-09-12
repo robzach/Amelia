@@ -32,6 +32,12 @@ void stateMachine() {
     if (change) {
       println("entering mode: " + mode);
       prevMode = mode;
+
+      // triggers once upon entering IDLE mode
+      // slow fading in and out of white
+      breaths[0] = new Breathe(true, 0, 15000);  // red
+      breaths[1] = new Breathe(true, 1, 15000); // green
+      breaths[2] = new Breathe(true, 2, 15000); // blue
     }
     idle();
     break;
@@ -44,6 +50,13 @@ void idle() {
   if (millis() - startTime > 1000) {
     println("idling at millis: " + millis());
     startTime = millis();
+  }
+
+  // updates all breathing functions, only for those objects currently wanting to be run
+  for (Breathe breath : breaths) {
+    if (breath.getActive()) {
+      breath.pollBreathe();
+    }
   }
 }
 

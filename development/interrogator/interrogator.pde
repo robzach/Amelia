@@ -34,7 +34,7 @@ int left, front, right, top;
 enum Mode { 
   IDLE, ORIENTATION, INTERROGATION, TERMINATION
 };
-Mode mode = Mode.ORIENTATION; // initial state
+Mode mode = Mode.IDLE; // initial state
 Mode prevMode; // to track changes
 int stageCounter = 0; // for tracking within modes
 
