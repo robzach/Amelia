@@ -94,73 +94,55 @@ void orientation() {
 
 void interrogation() {
   // pulse different lights up and down through a sequence of brightnesses
+  // these are described by the switch(case) statements below (as is the 
 
-  if (stageCounter == 0) {
-    startTime = millis(); 
-    for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
-    transmitBytes();
-    stageCounter = 1;
-  }
-
-  if (stageCounter == 1) {
-    breaths[0] = new Breathe(true, 0, 2000);  // begin red breathing sequence
-    startTime = millis();
-    stageCounter = 2;
-  }
-
-  if (stageCounter == 2) {
-    if (millis() - startTime > 10000) { //10 seconds later
+  if (millis() > nextSingleTime) {
+    int stepTime = 0;
+    switch(counter) {
+    case 0:
+      breaths[0] = new Breathe(true, 0, 2000);  // red breathing sequence
+      stepTime = 10000;
+      break;
+    case 1:
       breaths[0].setActive(false);
-      breaths[1] = new Breathe(true, 1, 1000);
-      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
-      startTime = millis();
-      stageCounter = 3;
-    }
-  }
-
-  if (stageCounter == 3) {
-    if (millis() - startTime > 10000) { //10 seconds later
+      breaths[1] = new Breathe(true, 1, 1000); // green breathing sequence
+      stepTime = 10000;
+      break;
+    case 2:
       breaths[1].setActive(false);
-      breaths[2] = new Breathe(true, 2, 750);
-      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
-      startTime = millis();
-      stageCounter = 4;
-    }
-  }
-
-  if (stageCounter == 4) {
-    if (millis() - startTime > 10000) { //10 seconds later
+      breaths[2] = new Breathe(true, 2, 750); // blue breathing sequence
+      stepTime = 10000;
+      break;
+    case 3:
       breaths[2].setActive(false);
-      breaths[1] = new Breathe(true, 0, 1000);
-      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
-      startTime = millis();
-      stageCounter = 5;
-    }
-  }
-
-  if (stageCounter == 5) {
-    if (millis() - startTime > 10000) { //10 seconds later
+      breaths[1] = new Breathe(true, 0, 1000); // red breathing sequence
+      stepTime = 10000;
+      break;
+    case 4:
       breaths[1].setActive(false);
-      breaths[0] = new Breathe(true, 0, 1000);
-      delay(500);
-      breaths[2] = new Breathe(true, 2, 1000);
-      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
-      startTime = millis();
-      stageCounter = 6;
+      breaths[0] = new Breathe(true, 0, 1000); // red breathing sequence
+      stepTime = 500;
+      break;
+    case 5:
+      // note that breaths[2] is still running from the previous case
+      breaths[2] = new Breathe(true, 2, 1000); // blue sequence to run concurrently with red
+      stepTime = 9500;
+      break;
+    case 6:
+      breaths[0].setActive(false); // turn everything off
+      breaths[2].setActive(false); // turn everything off
+      break;
+    case 7:
+      mode = Mode.TERMINATION;
+      break;
+    default:  // if it breaks, go to IDLE mode
+      mode = Mode.IDLE;
+      break;
     }
+    counter++; // increment for next case to get called next time
+    for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors in between steps
+    nextSingleTime = millis() + stepTime; // set up next time this if goes true
   }
-
-  if (stageCounter == 6) {
-    if (millis() - startTime > 10000) { // 10 seconds later
-      breaths[0].setActive(false);
-      breaths[2].setActive(false);
-      for (int i = 0; i < 3; i++) colors[i] = 0; // zero out colors
-      stageCounter = 7;
-    }
-  }
-
-  if (stageCounter == 7) mode = Mode.TERMINATION;
-
 
   // updates all breathing functions, only for those objects currently wanting to be run
   for (Breathe breath : breaths) {
@@ -171,7 +153,7 @@ void interrogation() {
 }
 
 void termination() {
-  
+
   // flashes red a bunch of times quickly
   // (blocking code! Probably doesn't matter at this point, though)
   for (int i = 0; i < 20; i++) {

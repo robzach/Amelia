@@ -104,6 +104,10 @@ public class Breathe {
 }
 Breathe[] breaths;
 
+// globals needed by INTERROGATION mode switch(case)
+long nextSingleTime;
+int counter;
+
 
 void setup () {
   size(600, 500); 
@@ -252,7 +256,8 @@ void updateWindow() {
     "\n\nmode: " + mode +
     "\nstageCounter: " + stageCounter +
     "\nmillis(): " + millis() +
-    "\nmillis() - startTime: " + (millis() - startTime);
+    "\nmillis() - startTime: " + (millis() - startTime) +
+    "\nnextSingleTime = " + nextSingleTime;
 
   textSize(20);
   text (displayData, 50, 50);
