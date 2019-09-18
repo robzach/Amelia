@@ -14,7 +14,7 @@ def signal_handler(sig, frame):
 	print('You pressed Ctrl+C!')
 	sys.exit(0)
 
-client = udp_client.SimpleUDPClient("127.0.0.1", 12345)
+client = udp_client.SimpleUDPClient("127.0.0.1", 12000)
 
 def on_message(ws, message):
 	resp = json.loads(message)
@@ -33,7 +33,7 @@ def on_close(ws):
 	makeSocket()
 
 def makeSocket():
-	ws = websocket.WebSocketApp("wss://staging.projectamelia.ai/pusherman/companions/login/websocket?app=tranquil",
+	ws = websocket.WebSocketApp("wss://projectamelia.ai/pusherman/companions/login/websocket?app=tranquil",
                               on_message = on_message,
                               on_error = on_error,
                               on_close = on_close)

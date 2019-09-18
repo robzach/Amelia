@@ -11,6 +11,12 @@ void stateMachine() {
       stageCounter = 0; // used to step through stages in orientation
     }
     orientation(); 
+
+    // if start signal received while in Orientation, move to idle
+    if (braceletTap) {
+      braceletTap = false; // flip it back after acknowledge
+      mode = Mode.IDLE;
+    }
     break;
   case INTERROGATION:
     if (change) {
@@ -19,6 +25,12 @@ void stateMachine() {
       stageCounter = 0; // reset stage counter for new mode
     }
     interrogation();
+
+    // if start signal received while in interrogation, move to idle
+    if (braceletTap) {
+      braceletTap = false; // flip it back after acknowledge
+      mode = Mode.IDLE;
+    }
     break;
   case TERMINATION: 
     if (change) {
@@ -39,7 +51,15 @@ void stateMachine() {
       breaths[1] = new Breathe(true, 1, 15000); // green
       breaths[2] = new Breathe(true, 2, 15000); // blue
     }
+
     idle();
+
+    // if start signal received, move to orientation mode
+    if (braceletTap) {
+      braceletTap = false; // flip it back after acknowledge
+      mode = Mode.ORIENTATION;
+    }
+
     break;
   }
 }

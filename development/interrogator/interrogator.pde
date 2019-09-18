@@ -14,11 +14,15 @@
  
  */
 
-
+import oscP5.*;
+import netP5.*;
 import processing.serial.*;
 // printArray(Serial.list()); // will print the list of ports as needed
 Serial myPort;
 String portName = "/dev/ttyUSB0"; // for USB access to the Arduino
+
+OscP5 oscP5;
+NetAddress myRemoteLocation;
 
 byte[] recdVals = new byte[5];
 int [] recdInts = new int[5];
@@ -40,7 +44,7 @@ int stageCounter = 0; // for tracking within modes
 
 boolean newDataRecd = true;
 
-boolean startSignalReceived = true; // boolean to be triggered by websocket event
+boolean braceletTap = false; // boolean to be triggered by websocket event
 boolean interrogationCompleted = false; // 
 
 long retransmitTimer = 0;
@@ -97,8 +101,8 @@ public class Breathe {
   boolean getActive() {
     return active;
   }
-  
-  void setActive(boolean newState){
+
+  void setActive(boolean newState) {
     active = newState;
   }
 }
@@ -116,6 +120,9 @@ void setup () {
   myPort = new Serial(this, portName, 57600);
   // don't generate a serialEvent() unless you get a 255 (terminator) byte:
   myPort.bufferUntil((byte)255);
+
+  oscP5 = new OscP5(this, 12000);
+  myRemoteLocation = new NetAddress("127.0.0.1", 12000);
 
   breaths = new Breathe[3];
   breaths[0] = new Breathe(false, -1, 100000);
@@ -148,6 +155,21 @@ void draw() {
     }
   }
   updateWindow();
+}
+
+void oscEvent(OscMessage theOscMessage) {
+  // if tag is read locally, flip boolean to indicate as much
+  braceletTap = true;
+
+  /* print the address pattern and the typetag of the received OscMessage */
+  print("### received an osc message.");
+  print(" addrpattern: "+theOscMessage.addrPattern());
+  println(" typetag: "+theOscMessage.typetag());
+  println(theOscMessage.get(0));
+  println(theOscMessage.get(1));
+  println(theOscMessage.get(2));
+  println(theOscMessage.get(3));
+  //Might want to make these .get().stringValue() if we have any trouble
 }
 
 
