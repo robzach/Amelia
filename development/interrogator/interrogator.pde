@@ -279,7 +279,8 @@ void updateWindow() {
     "\nstageCounter: " + stageCounter +
     "\nmillis(): " + millis() +
     "\nmillis() - startTime: " + (millis() - startTime) +
-    "\nnextSingleTime = " + nextSingleTime;
+    "\nnextSingleTime = " + nextSingleTime +
+    "\nbraceletTap = " + braceletTap;
 
   textSize(20);
   text (displayData, 50, 50);

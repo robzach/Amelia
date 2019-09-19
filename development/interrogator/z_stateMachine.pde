@@ -187,15 +187,17 @@ void interrogation() {
 
 void termination() {
 
-  // flashes red a bunch of times quickly
+  // flashes red and blue a bunch of times quickly
   // (blocking code! Probably doesn't matter at this point, though)
   for (int i = 0; i < 20; i++) {
-    colors[0] = 254;
+    colors[0] = 254; // red
+    colors[2] = 0; // no blue
     transmitBytes();
-    delay(50);
-    colors[0] = 0;
+    delay(100);
+    colors[0] = 0; // no red
+    colors[2] = 255; // blue
     transmitBytes();
-    delay(50);
+    delay(100);
   }
   mode = Mode.IDLE;
 }
