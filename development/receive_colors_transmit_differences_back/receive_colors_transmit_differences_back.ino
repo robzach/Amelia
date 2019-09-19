@@ -100,8 +100,8 @@ void serialEvent() {
 
 void writeColorsToLEDs() {
   rgb_color color;
-  color.red = readIn[1];
-  color.green = readIn[2];
+  color.green = readIn[1];
+  color.red = readIn[2];
   color.blue = readIn[3];
 
   for (uint16_t i = 0; i < LED_COUNT; i++) colors[i] = color;
