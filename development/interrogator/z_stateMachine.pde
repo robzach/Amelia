@@ -68,7 +68,6 @@ long startTime = 0;
 
 void idle() {
   if (millis() - startTime > 1000) {
-    println("idling at millis: " + millis());
     startTime = millis();
   }
 
@@ -166,6 +165,7 @@ void interrogation() {
       breaths[2].setActive(false); // turn everything off
       break;
     case 7:
+      counter = 0; // counter reset added by Mike to fix bug
       mode = Mode.TERMINATION;
       break;
     default:  // if it breaks, go to IDLE mode
